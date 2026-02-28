@@ -9,8 +9,8 @@ from UV_projector.img_convert import image_to_arr
 
 
 class Mode(enum.IntEnum):
-    STANDBY = (0xFF,)
-    EXTERNALPRINT = (0x06,)
+    STANDBY = 0xFF
+    EXTERNALPRINT = 0x06
     TESTPATTERN = 0x01
 
 
