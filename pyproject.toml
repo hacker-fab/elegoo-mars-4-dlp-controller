@@ -1,0 +1,9 @@
+[project]
+name = "elegoo-mars-4-dlp-controller"
+version = "0.1.0"
+requires-python = ">=3.8"
+
+[tool.ty.rules]
+  possibly-missing-import = "ignore"
+  unresolved-import = "ignore"
+
