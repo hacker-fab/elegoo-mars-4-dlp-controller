@@ -22,6 +22,7 @@ enclosure/.external-models/*
 *.sch-bak
 *~
 *#auto*
+.DS_Store
 
 _autosave-*
 *.tmp
