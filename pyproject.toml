@@ -7,3 +7,5 @@ requires-python = ">=3.8"
   possibly-missing-import = "ignore"
   unresolved-import = "ignore"
 
+[tool.ruff]
+  line-length = 240

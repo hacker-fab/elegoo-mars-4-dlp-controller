@@ -9,4 +9,4 @@ def image_to_arr(path):
     im_frame = Image.open(path)
     pixeldata = np.transpose(np.array(im_frame))
 
-    return  pixeldata
+    return pixeldata
