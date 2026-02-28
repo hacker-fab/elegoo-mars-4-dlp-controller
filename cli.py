@@ -42,6 +42,9 @@ if __name__ == "__main__":
         except FileNotFoundError:
             print(f"Error: Image not found: {args.filename}")
             exit(1)
+        except AssertionError as e:
+            print(f"Error: Invalid image dimensions: {e}")
+            exit(1)
         DMD.swap_buffer()
         DMD.expose_pattern(exposed_frames=args.exposure_frames)
         DMD.switch_mode(Mode.STANDBY)
