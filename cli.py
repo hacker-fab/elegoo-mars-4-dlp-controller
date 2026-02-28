@@ -7,7 +7,7 @@ from UV_projector.controller import DLPC1438, Mode
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("litho cli")
     parser.add_argument("filename")
-    parser.add_argument("--brightness", type=int, default=100, choices=range(0, 101), metavar="0-100", help = "UV LED brightness on a scale from [0, 100]")
+    parser.add_argument("--brightness", type=int, default=100, choices=range(0, 101), metavar="0-100", help="UV LED brightness on a scale from [0, 100]")
     parser.add_argument("--exposure-frames", type=int, default=200, help="exposure duration in frames (~60fps)")
     parser.add_argument("-x", "--x-offset", type=int, default=0)
     parser.add_argument("-y", "--y-offset", type=int, default=0)
