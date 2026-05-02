@@ -23,7 +23,11 @@ sudo raspi-config nonint do_spi 0
 We also need to increase the SPI buffer size, as the default is only 4096 bytes. To do so, we edit `cmdline.txt` by running
 
 ```shell
+#on modern raspbian releases:
+sudo nano /boot/firmware/cmdline.txt
+#on older releases:
 sudo nano /boot/cmdline.txt
+
 ```
 
 and we add the following entry to increase the buffer size to 65536  bytes:
@@ -31,6 +35,15 @@ and we add the following entry to increase the buffer size to 65536  bytes:
 ```
 spidev.bufsiz=65536  
 ```
+
+Also, your pi may come with lgpio installed, which doesn't seem to play nicely with the gpio accesses we are doing.
+If you have it installed, you'll need to replace it with RPi.GPIO (other gpio libraries may also work)
+
+```shell
+sudo apt remove python3-lgpio
+sudo apt install python3-rpi.gpio
+```
+
 
 > [!IMPORTANT]
 >
