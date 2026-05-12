@@ -1,0 +1,3 @@
+[submodule "external/grbl"]
+	path = external/grbl
+	url = https://github.com/hacker-fab/grbl
