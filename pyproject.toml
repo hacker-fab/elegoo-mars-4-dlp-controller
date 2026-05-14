@@ -13,3 +13,7 @@ dependencies = [
 
 [tool.ruff]
   line-length = 240
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+markers = ["hardware: requires a connected GRBL device"]
