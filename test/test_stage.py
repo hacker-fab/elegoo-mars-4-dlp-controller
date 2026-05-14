@@ -63,6 +63,5 @@ SEQ = [
 @pytest.mark.hardware
 @pytest.mark.parametrize("move", SEQ)
 def test_relative_move(stage, move):
-    """Each step in the dance — passes if no exception."""
     stage.move_relative(move)
-    time.sleep(0.3)
+    stage.wait_for_idle()

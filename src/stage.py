@@ -54,30 +54,15 @@ class GrblStage:
     def _fill_resp_buffer(self):
         self.resp_buffer += self.controller_target.read_all()
 
-    def _wait_for_idle(self, timeout=10):
-        """
-        To ensure we are accurantely moving the stage, we'll only send
-        GRBL the next move command when it is ready to take in more commands
-        This means we will return if we're no longer idle
-        """
+    def wait_for_idle(self, timeout=30.0, poll_interval=0.05):
+        """Block until GRBL reports Idle (motion complete + planner empty)."""
         deadline = time.time() + timeout
-
         while time.time() < deadline:
-            while b"\r\n" not in self.resp_buffer:
-                self._fill_resp_buffer()
-
-            raw, self.resp_buffer = self.resp_buffer.split(b"\r\n", 1)
-            line = raw.decode("ascii", errors="replace").strip()
-            self.resp_buffer = b""
-
-            if not line:
-                continue
-
-            if line.startswith("<") and "Idle" in line:
+            idle, _ = self._query_state()
+            if idle:
                 return
-
-            # ignore everything else (but don't lose it if you need it!)
-            raise TimeoutError("Stage did not reach idle")
+            time.sleep(poll_interval)
+        raise TimeoutError(f"Stage did not reach idle within {timeout}s")
 
     def _handle_alarms(self, response):
         _ALARM_MSGS = {
