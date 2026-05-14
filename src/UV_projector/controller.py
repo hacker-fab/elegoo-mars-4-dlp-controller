@@ -74,13 +74,18 @@ class DLPC1438:
             # is ready to go
             GPIO.output(self.PROJ_ON, GPIO.HIGH)
             ref_time = time.time()
+
+            # HOST_IRQ has a pull-up, so it reads HIGH even when the device is off.
+            # The device first pulls it LOW (boot acknowledged), then releases it HIGH (ready).
+            # Wait for the LOW phase first (with a 2s timeout in case we powered up from cold).
+            timeout = time.time() + 2.0
+            while GPIO.input(self.HOST_IRQ) and time.time() < timeout:
+                time.sleep(0.01)
+            # Now wait for HOST_IRQ to go HIGH (device ready)
             while not GPIO.input(self.HOST_IRQ):
                 time.sleep(0.01)
 
             print(f"DLPC1438 is signalling it is ready for use, {time.time() - ref_time} seconds after PROJ_ON went high.")
-
-            # now we need to wait for I2C communication to be ready
-            time.sleep(1)  # TODO: make this more robust
 
             # keep looping as long as we cannot find the DLPC1438 on the i2c bus
             while True:
@@ -89,10 +94,15 @@ class DLPC1438:
                         break
                 except OSError:
                     pass
-                time.sleep(1)
+                time.sleep(0.5)
 
-            # check the current active buffer
-            self.SPI_BUFFER_INDEX = self.__i2c_read(0xC6, 1)[0]
+            # check the current active buffer — retry since the device may still be initialising
+            while True:
+                try:
+                    self.SPI_BUFFER_INDEX = self.__i2c_read(0xC6, 1)[0]
+                    break
+                except OSError:
+                    time.sleep(0.5)
             print(f"Active buffer index at startup: {self.SPI_BUFFER_INDEX}")
 
             return
