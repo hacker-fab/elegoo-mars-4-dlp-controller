@@ -4,6 +4,7 @@
 
 from collections import defaultdict
 import time
+import re
 
 
 class UnsupportedCommand(Exception):
@@ -199,86 +200,25 @@ class GrblStage:
         return idle, resolved_position
 
     def _query_config(self):
-        """
-        queries for entire grbl settings ->
-        $0=10 (Step pulse time, microseconds) \n
-        $1=25 (Step idle delay, msec) \n
-        $2=0 (Step pulse invert, mask) \n
-        $3=0 (Step direction invert, mask) \n
-        $4=0 (Invert step enable pin, boolean)\n
-        $5=0 (Invert limit pins, boolean)\n
-        $6=0 (Invert probe pin, boolean)\n
-        $10=1 (Status report options, mask) \n
-        $11=0.010 (Junction deviation, mm) \n
-        $12=0.002 (Arc tolerance, mm) \n
-        $13=0 (Report inches, boolean) \n
-        $20=0 (Soft limits enable, boolean) \n
-        $21=0 (Hard limits enable, boolean) \n
-        $22=0 (Homing cycle enable, boolean) \n
-        $23=0 (Homing direction invert, mask) \n
-        $24=25.000 (Homing locate feed rate, mm/min) \n
-        $25=500.000 (Homing search seek rate, mm/min) \n
-        $26=250 (Homing switch debounce delay, msec) \n
-        $27=1.000 (Homing switch pull-off distance, mm) \n
-        $30=1000 (Max spindle speed, RPM) \n
-        $31=0 (Min spindle speed, RPM) \n
-        $32=0 (Laser mode enable, boolean) \n
-        $100=250.000 (X steps/mm) \n
-        $101=250.000 (Y steps/mm) \n
-        $102=250.000 (Z steps/mm) \n
-        $110=500.000 (X max rate, mm/min) \n
-        $111=500.000 (Y max rate, mm/min) \n
-        $112=500.000 (Z max rate, mm/min) \n
-        $120=10.000 (X acceleration, mm/sec^2) \n
-        $121=10.000 (Y acceleration, mm/sec^2) \n
-        $122=10.000 (Z acceleration, mm/sec^2) \n
-        $130=200.000 (X max travel, mm) \n
-        $131=200.000 (Y max travel, mm) \n
-        $132=200.000 (Z max travel, mm) \n
-        """
-        print("Querying GRBL configurations")
-        self.configuration = {}
+        """Query GRBL settings ($$). See https://github.com/gnea/grbl/wiki/Grbl-v1.1-Configuration."""
+        _SETTING_RE = re.compile(rb"\$(\d+)=([-\d.]*)")
+
         self.resp_buffer = b""
         self.controller_target.write(b"$$\n")
-        lines = []
-
-        # fetch entire configuration for grbl
         while b"ok" not in self.resp_buffer:
             self._fill_resp_buffer()
-        raw = self.resp_buffer.split(b"\r\n")
+
+        if b"error:" in self.resp_buffer:
+            raise RuntimeError(f"GRBL config query failed: {self.resp_buffer!r}")
+
+        def parse(v: str):
+            if not v:
+                return None
+            return float(v) if "." in v else int(v)
+
+        self.configuration = {int(m.group(1)): parse(m.group(2).decode()) for m in _SETTING_RE.finditer(self.resp_buffer)}
         self.resp_buffer = b""
-        buff = [r.decode("ascii", errors="replace").strip() for r in raw]
-
-        # parse the buffer
-        for setting in buff:
-            if not setting or "$" not in setting:
-                continue
-            if "ok" in setting:
-                break
-            if setting.startswith("error:"):
-                raise Exception(f"GRBL error: query config failed -> {setting}")  # double check this
-            lines.append(setting)
-
-        # parse string splits
-        for line in lines:
-            if "$" in line:
-                part = line.split("$")[-1].strip()  # => [0=10]
-                if "=" in part:
-                    key, value = part.split("=", 1)
-                    key = int(key.strip())
-                    value = value.strip()
-                    if value == "":
-                        value = None
-                    elif "." in value:
-                        value = float(value)
-                    else:
-                        value = int(value)
-                    self.configuration[key] = value
-        print("Done extracting configuration")
-        print(self.configuration)
-
-    def __del__(self):
-        self._send_msg(b"G91\n")
+        print(f"Loaded {len(self.configuration)} GRBL settings")
 
     def _move(self, microns: dict[str, float], relative):
 
