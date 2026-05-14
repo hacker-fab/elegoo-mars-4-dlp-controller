@@ -1,0 +1,8 @@
+version = 1
+revision = 3
+requires-python = ">=3.8"
+
+[[package]]
+name = "elegoo-mars-4-dlp-controller"
+version = "0.1.0"
+source = { virtual = "." }
