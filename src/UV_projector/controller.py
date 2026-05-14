@@ -107,19 +107,23 @@ class DLPC1438:
 
             return
 
-    def __i2c_read(self, register, length):
-        """Read I2C information from DCLP1438 at given register, expecting a certain number of bytes
-        of data.
+    def __i2c_read(self, register, length, retries=5):
+        for attempt in range(retries):
+            try:
+                return self.i2c.read_i2c_block_data(self.addr, register, length)
+            except OSError:
+                if attempt == retries - 1:
+                    raise
+                time.sleep(0.1)
 
-        This function exists primarily to keep a code more readable."""
-        return self.i2c.read_i2c_block_data(self.addr, register, length)
-
-    def __i2c_write(self, register, data):
-        """Write I2C information from DCLP1438 at given register, sending a list of bytes specified
-        in 'data'.
-
-        This function exists primarily to keep a code more readable."""
-        return self.i2c.write_i2c_block_data(self.addr, register, data)
+    def __i2c_write(self, register, data, retries=5):
+        for attempt in range(retries):
+            try:
+                return self.i2c.write_i2c_block_data(self.addr, register, data)
+            except OSError:
+                if attempt == retries - 1:
+                    raise
+                time.sleep(0.1)
 
     def switch_mode(self, new_mode):
         """
