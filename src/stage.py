@@ -79,65 +79,24 @@ class GrblStage:
             raise TimeoutError("Stage did not reach idle")
 
     def _handle_alarms(self, response):
-        """
-        GRBL Alarm codes:
-            ALARM:1  - Hard limit triggered
-            ALARM:2  - Soft limit triggered
-            ALARM:3  - Reset while in motion
-            ALARM:4  - Probe fail (initial state open)
-            ALARM:5  - Probe fail (contact not detected)
-            ALARM:6  - Homing fail (reset during cycle)
-            ALARM:7  - Homing fail (door opened during cycle)
-            ALARM:8  - Homing fail (failed to clear limit switch)
-            ALARM:9  - Homing fail (could not find limit switch)
-        """
+        _ALARM_MSGS = {
+            1: "Hard limit triggered — physical limit switch hit.",
+            2: "Soft limit reached — motion outside machine bounds.",
+            3: "Reset while in motion — rehome before continuing.",
+            4: "Probe fail (initial state open).",
+            5: "Probe fail (contact not detected).",
+            6: "Homing fail (reset during cycle).",
+            7: "Homing fail (door opened).",
+            8: "Homing fail (couldn't clear limit switch).",
+            9: "Homing fail (couldn't find limit switch).",
+        }
 
-        code = None
-        if ":" in response:
-            try:
-                code = int(response.split(":")[1].strip())
-            except ValueError:
-                pass
-
-        try:
-            self.soft_reset()  # soft reset and unlock first
-        except (Exception, RuntimeError, TimeoutError, ValueError) as e:
-            print(f"Error: {str(e)}")
-            return
-
-        # GRBL alarms -> Once in alarm-mode, Grbl will lock out and shut down everything until the user issues a reset
-        # --- Soft limit (ALARM:2) ---
-        if code == 2:
-            self.resp_buffer = b""
-            raise RuntimeError("Soft limit reached — motion outside machine bounds. Stage has been reset. Move away from boundary before retrying.")
-
-        # --- Hard limit (ALARM:1) ---
-        elif code == 1:
-            self.resp_buffer = b""
-            raise RuntimeError("Hard limit triggered — a physical limit switch was hit. Check stage position and mechanical state before continuing.")
-
-        # --- Homing failures (ALARM:6-9) ---
-        elif code in (6, 7, 8, 9):
-            self.resp_buffer = b""
-            raise RuntimeError(f"Homing failure ({response}) — homing cycle did not complete. Check limit switches and wiring.")
-
-        # --- Reset while in motion (ALARM:3) ---
-        elif code == 3:
-            self.resp_buffer = b""
+        code = int(response.split(":")[1]) if ":" in response else None
+        self.soft_reset()
+        self.resp_buffer = b""
+        if code == 3:
             self.valid_position = False
-            raise RuntimeError("GRBL was reset while the stage was moving. Position may be lost — rehome before continuing.")
-
-        # --- Probe failures (ALARM:4-5) ---
-        elif code in (4, 5):
-            # probe alarms don't necessarily require a full reset
-            # since your lithostepper may not use probing, raise clearly
-            self.resp_buffer = b""
-            raise RuntimeError(f"Probe failure ({response}) — check probe wiring and initial state.")
-
-        # --- Any other that we didn't cover ---
-        else:
-            self.resp_buffer = b""
-            raise RuntimeError(f"Unknown GRBL alarm: {response!r}. See https://docs.lightburnsoftware.com/legacy/Troubleshooting/GRBLErrors")
+        raise RuntimeError(f"unknown code: {code}" if code is None else _ALARM_MSGS.get(code, f"Unknown GRBL alarm: {response!r}"))
 
     def _send_msg(self, msg: bytes):
         """
@@ -513,61 +472,3 @@ class GrblStage:
             "y": list(axis_bounds(131)),
             "z": list(axis_bounds(132)),
         }
-
-    """
-    # pass in list of amounts to move by. Dictionary in "axis: amount" format
-    def move_by(self, amounts: dict[str, float]):
-        # first make sure axes are valid
-        if self.__axes_valid__(list(amounts.keys())):
-            x, y, z = self.__adjust_coordinates__(amounts, True)
-            self._move_relative((x, y, z))
-            # if that worked, update internal position
-            self.position[0] += x
-            self.position[1] += y
-            self.position[2] += z
-            print(f"moved by {x} {y} {z}")
-        else:
-            print('Error: tried to move on invalid axis')
-
-    def move_to(self, amounts: dict[str, float]):
-        # first make sure axes are valid
-        if self.__axes_valid__(list(amounts.keys())):
-            x, y, z = self.__adjust_coordinates__(amounts, False)
-            self._move_absolute((x, y, z))
-            # if that worked, update internal position
-            self.position[0] = x
-            self.position[1] = y
-            self.position[2] = z
-
-    def __axes_valid__(self, axes):
-        for axis in axes:
-            if axis not in self.axes or (axis != 'x' and axis != 'y' and axis != 'z'):
-                return False
-        return True
-
-    def __adjust_coordinates__(self, amounts: dict[str, float], relative: bool):
-        coords = [0.0, 0.0, 0.0]
-        clamped_amt = [0.0, 0.0, 0.0]
-        coords[0] = amounts.get('x')
-        coords[1] = amounts.get('y')
-        coords[2] = amounts.get('z')
-
-        for i in range(0, len(coords)):
-            bounds_lo, bounds_hi = self.bounds[i]
-            if coords[i] == None:
-                if relative:
-                    coords[i] = 0
-                else:
-                    coords[i] = self.position[i]
-            else:
-                # if bounds exceeded, set target coordinate to the boundary
-                if relative:
-                    clamped_amt[i] = clamp(coords[i] + self.position[i], bounds_lo, bounds_hi) - self.position[i]
-                else:
-                    clamped_amt[i] = clamp(coords[i], bounds_lo, bounds_hi)
-        print('a')
-        print(self.position)
-        print(coords)
-        print(clamped_amt)
-        return clamped_amt
-    """
