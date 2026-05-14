@@ -83,7 +83,12 @@ class DLPC1438:
             time.sleep(1)  # TODO: make this more robust
 
             # keep looping as long as we cannot find the DLPC1438 on the i2c bus
-            while i2c_bus.read_byte(self.addr) == 0:
+            while True:
+                try:
+                    if i2c_bus.read_byte(self.addr) != 0:
+                        break
+                except OSError:
+                    pass
                 time.sleep(1)
 
             # check the current active buffer
