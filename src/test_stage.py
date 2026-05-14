@@ -6,7 +6,6 @@ import serial
 from stage import GrblStage
 
 
-# PORT = "/dev/tty.usbserial-XXXX"  # change to your port (COM6 on Windows, /dev/ttyUSB0 on Linux)
 PORT = "/dev/tty.usbmodem1401"
 BAUD = 115200
 
